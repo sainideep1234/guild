@@ -1,11 +1,12 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import PrintTemplate from "../components/PrintTemplate";
 import Footer from "../components/Footer";
 import Loader from "../components/Loader";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userApi, session, getUploadUrl } from "../api/api";
+import Swal from "sweetalert2";
 import {
   FiUser,
   FiMail,
@@ -19,6 +20,9 @@ import {
   FiXCircle,
   FiPrinter,
   FiExternalLink,
+  FiShield,
+  FiX,
+  FiLoader,
 } from "react-icons/fi";
 
 /* ── Status config ─────────────────────────────────────────────────────── */
@@ -62,6 +66,11 @@ const InfoRow = ({ icon: Icon, label, value }) => (
 /* ══════════════════════════════════════════════════════════════════════════ */
 const UserDashboard = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // BYOMS Modal state
+  const [showByomsModal, setShowByomsModal] = useState(false);
+  const [bsgUidInput, setBsgUidInput] = useState("");
 
   useEffect(() => {
     if (!session.isLoggedIn()) navigate("/login");
@@ -71,6 +80,32 @@ const UserDashboard = () => {
     queryKey: ["userMe"],
     queryFn: userApi.getMe,
     enabled: session.isLoggedIn(),
+  });
+
+  // BSG UID verification mutation
+  const verifyUidMutation = useMutation({
+    mutationFn: (uid) => userApi.verifyBsgUid(uid),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries(["userMe"]);
+      setShowByomsModal(false);
+      setBsgUidInput("");
+      Swal.fire({
+        icon: "success",
+        title: "UID Verified!",
+        text: res.message || "Your BSG UID has been linked successfully.",
+        confirmButtonColor: "#1D57A5",
+        timer: 2500,
+        showConfirmButton: false,
+      });
+    },
+    onError: (err) => {
+      Swal.fire({
+        icon: "error",
+        title: "Verification Failed",
+        text: err.message || "Could not verify the BSG UID. Please try again.",
+        confirmButtonColor: "#1D57A5",
+      });
+    },
   });
 
   if (isLoading) return <Loader fullScreen text="Loading your dashboard..." />;
@@ -92,6 +127,8 @@ const UserDashboard = () => {
     ? getUploadUrl(detail.rashtrapati_certificate_path)
     : null;
 
+  const bsgUid = user?.bsg_uid || detail?.bsg_uid || null;
+
   return (
     <>
       <div className="print:hidden flex min-h-screen flex-col bg-[#F4F7FE] font-sans">
@@ -112,6 +149,39 @@ const UserDashboard = () => {
               >
                 <FiExternalLink size={16} />
                 Connect to OYMS
+              </button>
+
+              {/* Verify BYOMS */}
+              <button
+                onClick={() => {
+                  if (bsgUid) {
+                    Swal.fire({
+                      icon: "info",
+                      title: "Already Verified",
+                      html: `<p class="text-sm text-gray-600">Your BSG UID <strong class="text-[#1D57A5]">${bsgUid}</strong> is already linked and verified.</p>`,
+                      confirmButtonColor: "#1D57A5",
+                    });
+                  } else {
+                    setShowByomsModal(true);
+                  }
+                }}
+                className={`flex items-center justify-center gap-2 rounded-xl border-2 px-5 py-2.5 text-sm font-bold shadow-sm transition-all duration-300 active:scale-95 ${
+                  bsgUid
+                    ? "border-emerald-500 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white hover:shadow-md"
+                    : "border-amber-500 bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white hover:shadow-md"
+                }`}
+              >
+                {bsgUid ? (
+                  <>
+                    <FiCheckCircle size={16} />
+                    BYOMS Verified
+                  </>
+                ) : (
+                  <>
+                    <FiShield size={16} />
+                    Verify BYOMS
+                  </>
+                )}
               </button>
 
               {/* Status Badge */}
@@ -146,6 +216,22 @@ const UserDashboard = () => {
                 </span>
               </div>
             )}
+
+            {/* BSG UID display — only when verified */}
+            {bsgUid && (
+              <div className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-[#1D57A5]/5 px-4 py-2 text-center">
+                <FiShield size={16} className="text-[#1D57A5]" />
+                <span className="text-sm font-semibold text-gray-600">
+                  BSG UID:
+                </span>
+                <span className="text-sm font-extrabold text-[#1D57A5]">
+                  {bsgUid}
+                </span>
+                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                  <FiCheckCircle size={10} /> Verified
+                </span>
+              </div>
+            )}
           </div>
 
           {/* ── Rejection Reason ────────────────────── */}
@@ -169,12 +255,12 @@ const UserDashboard = () => {
                     </p>
                   </div>
                   <div className="mt-3">
-                    <button
+                    {/* <button
                       onClick={() => navigate("/form")}
                       className="inline-flex items-center gap-2 rounded-xl bg-[#1D57A5] px-5 py-2 text-xs font-bold text-white shadow-md transition-all hover:bg-[#163f7a] hover:shadow-lg active:scale-95"
                     >
                       Update & Resubmit
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </div>
@@ -211,6 +297,12 @@ const UserDashboard = () => {
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
                       <FiCalendar size={12} />
                       {detail.year_of_rastrapati}
+                    </span>
+                  )}
+                  {bsgUid && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+                      <FiShield size={12} />
+                      UID: {bsgUid}
                     </span>
                   )}
                 </div>
@@ -293,6 +385,13 @@ const UserDashboard = () => {
                   label="Souvenir"
                   value={detail.souvenir}
                 />
+                {bsgUid && (
+                  <InfoRow
+                    icon={FiShield}
+                    label="BSG UID (BYOMS)"
+                    value={bsgUid}
+                  />
+                )}
 
                 {/* ── Document Links ── */}
                 {aadhaarDocUrl && (
@@ -348,7 +447,129 @@ const UserDashboard = () => {
 
         <Footer />
       </div>
+
       <PrintTemplate detail={detail} user={user} verification={verification} />
+
+      {/* ═══════════ BYOMS VERIFICATION MODAL ═══════════ */}
+      {showByomsModal && (
+        <div className="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div
+            className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+            style={{ animation: "byomsModalIn 0.3s ease-out" }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between bg-[#1D57A5] px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
+                  <FiShield size={18} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Verify BYOMS</h3>
+                  <p className="text-[11px] font-medium text-white/70">
+                    Link your BSG UID from OYMS
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowByomsModal(false);
+                  setBsgUidInput("");
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white transition hover:bg-white/40"
+              >
+                <FiX size={16} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6">
+              <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+                <p className="text-xs leading-relaxed text-gray-600">
+                  Enter your <strong className="text-[#1D57A5]">BSG UID</strong> from
+                  the OYMS portal. This will be verified against the official BSG database
+                  and permanently linked to your account.
+                </p>
+              </div>
+
+              <label className="mb-1.5 block text-xs font-bold tracking-wider text-gray-500 uppercase">
+                BSG UID
+              </label>
+              <input
+                type="text"
+                value={bsgUidInput}
+                onChange={(e) => setBsgUidInput(e.target.value)}
+                placeholder="Enter your BSG UID"
+                className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm font-semibold text-gray-800 outline-none transition-all focus:border-[#1D57A5] focus:ring-2 focus:ring-[#1D57A5]/20"
+                autoFocus
+                disabled={verifyUidMutation.isPending}
+              />
+
+              {/* Buttons */}
+              <div className="mt-5 flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowByomsModal(false);
+                    setBsgUidInput("");
+                  }}
+                  disabled={verifyUidMutation.isPending}
+                  className="flex-1 rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-bold text-gray-600 transition-all hover:bg-gray-100 active:scale-95 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!bsgUidInput.trim()) {
+                      Swal.fire({
+                        icon: "warning",
+                        title: "Empty UID",
+                        text: "Please enter your BSG UID to verify.",
+                        confirmButtonColor: "#1D57A5",
+                      });
+                      return;
+                    }
+                    verifyUidMutation.mutate(bsgUidInput.trim());
+                  }}
+                  disabled={verifyUidMutation.isPending || !bsgUidInput.trim()}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#1D57A5] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition-all hover:bg-[#163f7a] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {verifyUidMutation.isPending ? (
+                    <>
+                      <FiLoader size={16} className="animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <FiCheckCircle size={16} />
+                      Verify & Link
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Verification spinner overlay */}
+            {verifyUidMutation.isPending && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#1D57A5]/20 border-t-[#1D57A5]"></div>
+                <p className="mt-3 text-sm font-bold text-[#1D57A5]">
+                  Verifying your BSG UID...
+                </p>
+                <p className="mt-1 text-xs text-gray-400">
+                  Connecting to BYOMS server
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal animation keyframes */}
+      <style>{`
+        @keyframes byomsModalIn {
+          from { opacity: 0; transform: scale(0.92) translateY(12px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `}</style>
     </>
   );
 };

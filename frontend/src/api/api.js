@@ -69,6 +69,9 @@ export const userApi = {
 
   submitForm: (formData) =>
     apiRequest("/user/submit-form", { method: "POST", body: formData }),
+
+  verifyBsgUid: (uid) =>
+    apiRequest("/user/verify-bsg-uid", { method: "POST", body: { uid } }),
 };
 
 // ── Admin Auth APIs ───────────────────────────────────────────────────────────

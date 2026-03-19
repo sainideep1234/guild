@@ -403,6 +403,7 @@ userRouter.get("/me", userMiddleware, async (req, res) => {
         role: user.role,
         mobile_no: user.mobile_no,
         section: user.section,
+        bsg_uid: detail?.bsg_uid || null,
       },
       detail: detail || null,
       verification: {
@@ -414,6 +415,74 @@ userRouter.get("/me", userMiddleware, async (req, res) => {
   } catch (error) {
     console.log("[ERROR user/me]", error);
     return res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// ── POST /api/user/verify-bsg-uid ────────────────────────────────────────────
+userRouter.post("/verify-bsg-uid", userMiddleware, async (req, res) => {
+  try {
+    const { uid } = req.body;
+    if (!uid || typeof uid !== "string" || uid.trim().length === 0) {
+      return res.status(400).json({ message: "Please provide a valid BSG UID" });
+    }
+
+    const trimmedUid = uid.trim();
+
+    // Check if UID is already used by another user
+    const existingDetail = await UserDetail.findOne({
+      bsg_uid: trimmedUid,
+      account: { $ne: req.user.id },
+    });
+    if (existingDetail) {
+      return res.status(409).json({
+        message: "This BSG UID is already linked to another account.",
+      });
+    }
+
+    // Call the external BYOMS API to verify the UID
+    const apiResponse = await fetch(
+      "https://bw-districtuid.bsgindia.tech/get-leveluseruid",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": "aba92403-4435-46ce-bb47-9b04941134b3",
+        },
+        body: JSON.stringify({ UID: trimmedUid }),
+      },
+    );
+
+    const apiData = await apiResponse.json();
+
+    if (!apiResponse.ok || !apiData) {
+      return res.status(400).json({
+        message: "BSG UID verification failed. Please check your UID and try again.",
+      });
+    }
+
+    // Save the verified UID to UserDetail
+    const detail = await UserDetail.findOne({ account: req.user.id });
+    if (!detail) {
+      // If no detail record yet, create a minimal one with the UID
+      const regUser = await Registration.findById(req.user.id);
+      await UserDetail.create({
+        account: req.user.id,
+        name: regUser?.name || "User",
+        bsg_uid: trimmedUid,
+      });
+    } else {
+      detail.bsg_uid = trimmedUid;
+      await detail.save();
+    }
+
+    return res.status(200).json({
+      message: "BSG UID verified and linked successfully!",
+      bsg_uid: trimmedUid,
+      byoms_data: apiData,
+    });
+  } catch (error) {
+    console.log("[ERROR user/verify-bsg-uid]", error);
+    return res.status(500).json({ message: "Verification service unavailable. Please try again later." });
   }
 });
 

@@ -20,6 +20,9 @@
 10. [Admin Dashboard — Excel Column Names](#10-admin-dashboard--excel-column-names)
 11. [.gitignore & Uploads Cleanup](#11-gitignore--uploads-cleanup)
 12. [Git Remote — Switched to Personal Repo](#12-git-remote--switched-to-personal-repo)
+13. [OYMS Verification — Backend API Route](#13-oyms-verification--backend-api-route)
+14. [OYMS Verification — Frontend Modal & Button](#14-oyms-verification--frontend-modal--button)
+15. [UI Cleanup — Removed Duplicate UID Displays](#15-ui-cleanup--removed-duplicate-uid-displays)
 
 ---
 
@@ -754,7 +757,7 @@ The `-u` flag sets up tracking so future `git push` commands automatically push 
 
 ---
 
-## Summary of All Files Changed
+## Summary of All Files Changed (Sections 1–12)
 
 | File | Type | What Changed |
 |------|------|-------------|
@@ -784,6 +787,564 @@ EMAIL_PASS=BSGnhq@1950
 ```
 
 These are used by the `nodemailer` transporter in `mail.js` to send OTP and confirmation emails.
+
+---
+
+# Phase 3 — Continued (OYMS / BSG UID Verification)
+
+> **Date:** 19 March 2026 (late evening session)  
+> **Scope:** OYMS BSG UID verification — full stack feature (backend API + frontend modal) + UI polish
+
+---
+
+## 13. OYMS Verification — Backend API Route
+
+### What I Realized
+
+Users needed a way to **link their BSG UID** (from the OYMS portal) to their guild application. The external BYOMS API exists at `https://bw-districtuid.bsgindia.tech/get-leveluseruid` and can verify whether a UID is valid. The `UserDetail` model already had a `bsg_uid` field (String type) that was never being used. This was the perfect place to store the verified UID.
+
+### What I Did
+
+1. Created a new backend route: `POST /api/user/verify-bsg-uid`
+2. Updated the existing `GET /api/user/me` route to return `bsg_uid` in the response
+3. Added a new frontend API function: `userApi.verifyBsgUid(uid)`
+
+### Why I Did This
+
+Without this feature, there was no way for a user to prove they're a registered BSG member. The OYMS portal (`oyms.bsgindia.org`) assigns UIDs to scouts/guides, and linking that UID to the guild application adds a layer of identity verification that admins can trust.
+
+### How It Works — The Backend Route
+
+```
+File: backend/routes/user.js
+Route: POST /api/user/verify-bsg-uid
+Protected by: userMiddleware (JWT auth required)
+```
+
+The route does four things in order:
+
+#### Step 1: Validate the Input
+
+```javascript
+const { uid } = req.body;
+if (!uid || typeof uid !== "string" || uid.trim().length === 0) {
+  return res.status(400).json({ message: "Please provide a valid BSG UID" });
+}
+
+const trimmedUid = uid.trim();
+```
+
+- Extracts `uid` from the request body
+- Checks it's a non-empty string
+- Trims whitespace (users might accidentally paste with spaces)
+
+#### Step 2: Check for Duplicate UIDs
+
+```javascript
+const existingDetail = await UserDetail.findOne({
+  bsg_uid: trimmedUid,
+  account: { $ne: req.user.id },  // $ne = "not equal"
+});
+if (existingDetail) {
+  return res.status(409).json({
+    message: "This BSG UID is already linked to another account.",
+  });
+}
+```
+
+This prevents two users from claiming the same BSG UID. The `$ne: req.user.id` part is important — it allows the **same user** to re-verify their own UID (idempotent), but blocks **other users** from using the same one.
+
+| Scenario | Result |
+|----------|--------|
+| User A verifies UID "BSG001" | ✅ Success |
+| User A verifies "BSG001" again | ✅ Success (same user, no conflict) |
+| User B tries to verify "BSG001" | ❌ 409 Conflict |
+
+#### Step 3: Call the External BYOMS API
+
+```javascript
+const apiResponse = await fetch(
+  "https://bw-districtuid.bsgindia.tech/get-leveluseruid",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "aba92403-4435-46ce-bb47-9b04941134b3",
+    },
+    body: JSON.stringify({ UID: trimmedUid }),
+  },
+);
+
+const apiData = await apiResponse.json();
+
+if (!apiResponse.ok || !apiData) {
+  return res.status(400).json({
+    message: "BSG UID verification failed. Please check your UID and try again.",
+  });
+}
+```
+
+Key details:
+- Uses **native `fetch()`** (Node.js 18+ has this built-in, so no external package like `axios` is needed)
+- The API requires `x-api-key` header for authentication
+- The request body sends `{ UID: "..." }` — note the uppercase `UID` key (this is what the external API expects)
+- If the API responds with a non-OK status or empty body, we reject the verification
+
+#### Step 4: Save to Database
+
+```javascript
+const detail = await UserDetail.findOne({ account: req.user.id });
+if (!detail) {
+  // User hasn't filled the form yet — create a minimal record
+  const regUser = await Registration.findById(req.user.id);
+  await UserDetail.create({
+    account: req.user.id,
+    name: regUser?.name || "User",
+    bsg_uid: trimmedUid,
+  });
+} else {
+  // User already has a detail record — just set the UID
+  detail.bsg_uid = trimmedUid;
+  await detail.save();
+}
+```
+
+Two scenarios:
+- **User has already filled the form** → `UserDetail` document exists → we just add `bsg_uid` to it
+- **User hasn't filled the form yet** → No `UserDetail` exists → we CREATE a new minimal document with just `account`, `name`, and `bsg_uid`
+
+This means users can verify their BSG UID **even before filling the application form**.
+
+#### Response on Success
+
+```javascript
+return res.status(200).json({
+  message: "BSG UID verified and linked successfully!",
+  bsg_uid: trimmedUid,
+  byoms_data: apiData,   // Whatever the external API returned
+});
+```
+
+### How the `/me` Route Was Updated
+
+The `/me` route now includes `bsg_uid` in the user object:
+
+```javascript
+// BEFORE:
+user: {
+  id: user._id,
+  email: user.email,
+  name: user.name,
+  role: user.role,
+  mobile_no: user.mobile_no,
+  section: user.section,
+}
+
+// AFTER:
+user: {
+  id: user._id,
+  email: user.email,
+  name: user.name,
+  role: user.role,
+  mobile_no: user.mobile_no,
+  section: user.section,
+  bsg_uid: detail?.bsg_uid || null,   // ← NEW
+}
+```
+
+This means the frontend gets the UID automatically when loading the dashboard — no extra API call needed.
+
+### Frontend API Addition
+
+```javascript
+// File: frontend/src/api/api.js
+
+export const userApi = {
+  // ... existing methods ...
+
+  verifyBsgUid: (uid) =>
+    apiRequest("/user/verify-bsg-uid", { method: "POST", body: { uid } }),
+};
+```
+
+This is a simple one-liner that sends the UID to our backend. The `apiRequest` wrapper automatically:
+- Adds the JWT token in the `Authorization` header
+- Sets `Content-Type: application/json`
+- Parses the response JSON
+- Throws an error if the response is not OK
+
+### Error Handling
+
+| Error | HTTP Status | When |
+|-------|------------|------|
+| Empty/invalid UID | 400 | User submits blank input |
+| UID already linked to another user | 409 | Duplicate UID |
+| BYOMS API rejects the UID | 400 | Invalid/nonexistent UID |
+| BYOMS API is down | 500 | Network error to external API |
+
+### Complete Data Flow
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│                        COMPLETE FLOW                              │
+├───────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  User enters UID in modal                                         │
+│        ↓                                                          │
+│  Frontend calls: POST /api/user/verify-bsg-uid { uid: "BSG001" } │
+│        ↓                                                          │
+│  Backend validates input (non-empty string)                       │
+│        ↓                                                          │
+│  Backend checks MongoDB: is this UID used by another account?     │
+│        ↓ No                                                       │
+│  Backend calls external API:                                      │
+│    POST https://bw-districtuid.bsgindia.tech/get-leveluseruid     │
+│    Headers: { x-api-key: "aba92403-..." }                         │
+│    Body:    { UID: "BSG001" }                                     │
+│        ↓                                                          │
+│  External API returns user data (verified)                        │
+│        ↓                                                          │
+│  Backend saves bsg_uid to UserDetail in MongoDB                   │
+│        ↓                                                          │
+│  Backend returns: { message: "...", bsg_uid: "BSG001" }           │
+│        ↓                                                          │
+│  Frontend shows success SweetAlert                                │
+│  Frontend invalidates "userMe" query → dashboard refreshes        │
+│  "Connect to OYMS" button turns green → "OYMS Verified" ✅        │
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 14. OYMS Verification — Frontend Modal & Button
+
+### What I Realized
+
+The original dashboard had two buttons: "Connect to OYMS" (which just opened `oyms.bsgindia.org` in a new tab) and nothing for UID verification. The user wanted a way to verify their BSG UID directly from the dashboard. Initially I created a separate "Verify BYOMS" button, but the user clarified that BYOMS and OYMS are the same system — so the functionality should be merged into the existing "Connect to OYMS" button.
+
+### What I Did
+
+1. Replaced the old "Connect to OYMS" button (which just opened an external link) with a smart button that opens a verification modal
+2. Created a beautiful modal with UID input, animated loading spinner, and success/error feedback
+3. Used `useMutation` from React Query for the API call with proper loading states
+4. After successful verification, the button turns green and shows "OYMS Verified ✅"
+5. Added a small UID badge pill in the profile header next to the user's name
+
+### Why I Did This
+
+The old "Connect to OYMS" button just opened a new tab — it had no integration with the guild application. By replacing it with the verification modal, users can now:
+- Enter their BSG UID
+- Get it verified against the official database (in real-time)
+- Have it permanently linked to their account
+- See the verification status at a glance (green button = verified)
+
+### How It Works — The "Connect to OYMS" Button
+
+The button has two visual states:
+
+```jsx
+<button
+  onClick={() => {
+    if (bsgUid) {
+      // Already verified — show info popup
+      Swal.fire({
+        icon: "info",
+        title: "Already Verified",
+        html: `Your BSG UID <strong>${bsgUid}</strong> is already linked.`,
+        confirmButtonColor: "#1D57A5",
+      });
+    } else {
+      // Not verified — open the modal
+      setShowByomsModal(true);
+    }
+  }}
+  className={`... ${
+    bsgUid
+      ? "border-emerald-500 bg-emerald-50 text-emerald-600 ..."   // GREEN when verified
+      : "border-[#1D57A5] bg-[#1D57A5]/5 text-[#1D57A5] ..."    // BLUE when not verified
+  }`}
+>
+  {bsgUid ? (
+    <>
+      <FiCheckCircle size={16} />
+      OYMS Verified
+    </>
+  ) : (
+    <>
+      <FiShield size={16} />
+      Connect to OYMS
+    </>
+  )}
+</button>
+```
+
+| State | Color | Icon | Label | On Click |
+|-------|-------|------|-------|----------|
+| Not verified | BSG Blue | 🛡️ FiShield | "Connect to OYMS" | Opens verification modal |
+| Verified | Green | ✅ FiCheckCircle | "OYMS Verified" | Shows SweetAlert with UID info |
+
+### How It Works — The Verification Modal
+
+The modal is a React component rendered conditionally when `showByomsModal` is `true`. It appears as a centered overlay with backdrop blur.
+
+**Structure:**
+
+```
+┌──────────────────────────────────────┐
+│  🛡️ Verify BYOMS                  ✕ │  ← BSG blue header with close button
+│     Link your BSG UID from OYMS      │
+├──────────────────────────────────────┤
+│                                      │
+│  ℹ️ Enter your BSG UID from the     │  ← Info box explaining the purpose
+│     OYMS portal...                   │
+│                                      │
+│  BSG UID                             │  ← Label
+│  ┌──────────────────────────────┐   │
+│  │ Enter your BSG UID           │   │  ← Input field with focus ring
+│  └──────────────────────────────┘   │
+│                                      │
+│  ┌──────────┐  ┌──────────────────┐ │
+│  │  Cancel   │  │ ✅ Verify & Link │ │  ← Two action buttons
+│  └──────────┘  └──────────────────┘ │
+│                                      │
+└──────────────────────────────────────┘
+```
+
+**When verifying (loading state):**
+
+A full-overlay spinner covers the modal:
+
+```
+┌──────────────────────────────────────┐
+│                                      │
+│         ⟳  (spinning circle)         │
+│                                      │
+│    Verifying your BSG UID...         │
+│    Connecting to BYOMS server        │
+│                                      │
+└──────────────────────────────────────┘
+```
+
+#### Modal Animation
+
+The modal has an entrance animation using CSS keyframes:
+
+```css
+@keyframes byomsModalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+```
+
+This gives a smooth "slide up + fade in + slight zoom" effect when the modal opens.
+
+### How It Works — The React Query Mutation
+
+```javascript
+const verifyUidMutation = useMutation({
+  mutationFn: (uid) => userApi.verifyBsgUid(uid),
+
+  onSuccess: (res) => {
+    // 1. Refresh the dashboard data (re-fetches /me endpoint)
+    queryClient.invalidateQueries(["userMe"]);
+
+    // 2. Close the modal and clear the input
+    setShowByomsModal(false);
+    setBsgUidInput("");
+
+    // 3. Show success popup (auto-closes after 2.5 seconds)
+    Swal.fire({
+      icon: "success",
+      title: "UID Verified!",
+      text: res.message || "Your BSG UID has been linked successfully.",
+      confirmButtonColor: "#1D57A5",
+      timer: 2500,
+      showConfirmButton: false,
+    });
+  },
+
+  onError: (err) => {
+    // Show error popup — does NOT close the modal (user can retry)
+    Swal.fire({
+      icon: "error",
+      title: "Verification Failed",
+      text: err.message || "Could not verify the BSG UID. Please try again.",
+      confirmButtonColor: "#1D57A5",
+    });
+  },
+});
+```
+
+Key behavior:
+- **On success:** Modal closes, dashboard refreshes (button turns green), success alert auto-dismisses
+- **On error:** Modal stays open so the user can fix their UID and retry
+- **Loading state:** `verifyUidMutation.isPending` controls the spinner overlay and disables input/buttons
+
+#### The Submit Button
+
+```jsx
+<button
+  onClick={() => {
+    if (!bsgUidInput.trim()) {
+      Swal.fire({ icon: "warning", title: "Empty UID", ... });
+      return;
+    }
+    verifyUidMutation.mutate(bsgUidInput.trim());
+  }}
+  disabled={verifyUidMutation.isPending || !bsgUidInput.trim()}
+>
+  {verifyUidMutation.isPending ? (
+    <>
+      <FiLoader className="animate-spin" />  Verifying...
+    </>
+  ) : (
+    <>
+      <FiCheckCircle />  Verify & Link
+    </>
+  )}
+</button>
+```
+
+- Button is disabled when input is empty or when verification is in progress
+- Shows a spinning loader icon during verification
+
+### How It Works — UID Display in Profile Header
+
+After verification, a small green pill badge appears next to the user's name and section:
+
+```jsx
+{bsgUid && (
+  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+    <FiShield size={12} />
+    UID: {bsgUid}
+  </span>
+)}
+```
+
+This sits alongside the existing section badge and year badge:
+
+```
+┌──────────────────────────────────────────────────┐
+│  [Photo]  Deepanshu Saini                        │
+│           [Scout]  [2024]  [UID: BSG0002]        │  ← Green pill
+│           deepanshu@email.com                     │
+└──────────────────────────────────────────────────┘
+```
+
+### New Imports Added
+
+```javascript
+// File: frontend/src/pages/UserDashboard.jsx
+
+import React, { useEffect, useState } from "react";             // Added useState
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";  // Added useMutation, useQueryClient
+import Swal from "sweetalert2";                                  // NEW import
+import { FiShield, FiX, FiLoader } from "react-icons/fi";       // NEW icons
+```
+
+| Import | Why |
+|--------|-----|
+| `useState` | To manage modal visibility (`showByomsModal`) and input value (`bsgUidInput`) |
+| `useMutation` | To handle the verification API call with loading/error/success states |
+| `useQueryClient` | To invalidate the "userMe" query after successful verification |
+| `Swal` (SweetAlert2) | For success/error/info popup messages |
+| `FiShield` | Shield icon for the "Connect to OYMS" button |
+| `FiX` | X icon for the modal close button |
+| `FiLoader` | Spinning loader icon during verification |
+
+---
+
+## 15. UI Cleanup — Removed Duplicate UID Displays
+
+### What I Realized
+
+After implementing the OYMS verification, the BSG UID was being shown in **three places** on the dashboard:
+
+1. ✅ **Profile header pill badge** — Small green pill next to the name (looks clean)
+2. ❌ **Action bar strip** — A full-width blue strip below the buttons saying "BSG UID: BSG0002 ✓ Verified"
+3. ❌ **Info grid card** — An `InfoRow` card labeled "BSG UID (BYOMS)" in the profile details grid
+
+This was visually redundant and cluttered. The action bar strip looked especially heavy — it added unnecessary vertical space between the buttons and the profile card. The info grid card was also not needed because the UID is not the same type of information as "T-Shirt Size" or "Souvenir".
+
+### What I Did
+
+Removed items 2 and 3, keeping only the subtle green pill badge in the profile header.
+
+### Why I Did This
+
+Information should be shown once, in the right place. The green "OYMS Verified" button already tells the user they're verified (and clicking it shows the UID). The header pill badge provides quick visibility. Adding two more display locations was overkill.
+
+### How It Works — What Was Removed
+
+**1. The action bar strip (removed):**
+
+```jsx
+// DELETED from the action bar section:
+{bsgUid && (
+  <div className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-[#1D57A5]/5 px-4 py-2 text-center">
+    <FiShield size={16} className="text-[#1D57A5]" />
+    <span className="text-sm font-semibold text-gray-600">BSG UID:</span>
+    <span className="text-sm font-extrabold text-[#1D57A5]">{bsgUid}</span>
+    <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+      <FiCheckCircle size={10} /> Verified
+    </span>
+  </div>
+)}
+```
+
+**2. The info grid card (removed):**
+
+```jsx
+// DELETED from the details grid:
+{bsgUid && (
+  <InfoRow
+    icon={FiShield}
+    label="BSG UID (BYOMS)"
+    value={bsgUid}
+  />
+)}
+```
+
+### Where UID Is Still Visible
+
+After the cleanup, the UID is accessible in two ways:
+
+| Location | How | Visual |
+|----------|-----|--------|
+| **"OYMS Verified" button** | Click the green button → SweetAlert shows the UID | Button in action bar |
+| **Profile header pill** | Always visible next to name, section, and year badges | Small green pill `UID: BSG0002` |
+
+---
+
+## Summary of All Files Changed (Sections 13–15)
+
+| File | Type | What Changed |
+|------|------|-------------|
+| `backend/routes/user.js` | Modified | New `POST /verify-bsg-uid` route + `/me` returns `bsg_uid` |
+| `frontend/src/api/api.js` | Modified | Added `verifyBsgUid()` to `userApi` |
+| `frontend/src/pages/UserDashboard.jsx` | Rewritten | OYMS verification modal, smart button, mutation, UID display, UI cleanup |
+
+---
+
+## Complete File Change Summary (All Phases)
+
+| File | What Changed |
+|------|-------------|
+| `backend/config/mail.js` | OTP email template + form submission email function |
+| `backend/routes/user.js` | User name in OTP emails + BSG UID verification route + `/me` returns `bsg_uid` |
+| `backend/models/userDetail.js` | Already had `bsg_uid: String` field (no change needed) |
+| `frontend/src/index.css` | Inter font, smooth scroll, selection color |
+| `frontend/src/pages/LandingPage.jsx` | Full revamp with animations, badges, info cards |
+| `frontend/src/pages/Register.jsx` | Password validation + strength indicators |
+| `frontend/src/pages/Form.jsx` | BSG data imports, revenue district reset on state change |
+| `frontend/src/pages/AdminDashboard.jsx` | Excel column names match DB fields |
+| `frontend/src/pages/UserDashboard.jsx` | OYMS verification modal + button + mutation + UID display + UI cleanup |
+| `frontend/src/api/api.js` | Added `verifyBsgUid()` API function |
+| `frontend/src/data/indiaStates.js` | Full BSG state/district data + revenue state districts |
+| `frontend/index.html` | Favicon changed to BSG logo |
+| `frontend/public/bsglogo.png` | BSG logo file for favicon |
+| `.gitignore` | Ignore uploads folder |
 
 ---
 

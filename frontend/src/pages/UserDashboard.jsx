@@ -140,18 +140,7 @@ const UserDashboard = () => {
           {/* ── Top Action Bar ───────── */}
           <div className="rounded-2xl border border-white/60 bg-white/80 p-3 shadow-sm backdrop-blur-md sm:p-4">
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-              {/* Connect to OYMS */}
-              <button
-                onClick={() =>
-                  window.open("https://oyms.bsgindia.org", "_blank")
-                }
-                className="flex items-center justify-center gap-2 rounded-xl border-2 border-[#1D57A5] bg-[#1D57A5]/5 px-5 py-2.5 text-sm font-bold text-[#1D57A5] shadow-sm transition-all duration-300 hover:bg-[#1D57A5] hover:text-white hover:shadow-md active:scale-95"
-              >
-                <FiExternalLink size={16} />
-                Connect to OYMS
-              </button>
-
-              {/* Verify BYOMS */}
+              {/* Connect to OYMS — opens verify modal or shows verified status */}
               <button
                 onClick={() => {
                   if (bsgUid) {
@@ -168,18 +157,18 @@ const UserDashboard = () => {
                 className={`flex items-center justify-center gap-2 rounded-xl border-2 px-5 py-2.5 text-sm font-bold shadow-sm transition-all duration-300 active:scale-95 ${
                   bsgUid
                     ? "border-emerald-500 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white hover:shadow-md"
-                    : "border-amber-500 bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white hover:shadow-md"
+                    : "border-[#1D57A5] bg-[#1D57A5]/5 text-[#1D57A5] hover:bg-[#1D57A5] hover:text-white hover:shadow-md"
                 }`}
               >
                 {bsgUid ? (
                   <>
                     <FiCheckCircle size={16} />
-                    BYOMS Verified
+                    OYMS Verified
                   </>
                 ) : (
                   <>
                     <FiShield size={16} />
-                    Verify BYOMS
+                    Connect to OYMS
                   </>
                 )}
               </button>
@@ -217,21 +206,7 @@ const UserDashboard = () => {
               </div>
             )}
 
-            {/* BSG UID display — only when verified */}
-            {bsgUid && (
-              <div className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-[#1D57A5]/5 px-4 py-2 text-center">
-                <FiShield size={16} className="text-[#1D57A5]" />
-                <span className="text-sm font-semibold text-gray-600">
-                  BSG UID:
-                </span>
-                <span className="text-sm font-extrabold text-[#1D57A5]">
-                  {bsgUid}
-                </span>
-                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                  <FiCheckCircle size={10} /> Verified
-                </span>
-              </div>
-            )}
+
           </div>
 
           {/* ── Rejection Reason ────────────────────── */}
@@ -385,13 +360,7 @@ const UserDashboard = () => {
                   label="Souvenir"
                   value={detail.souvenir}
                 />
-                {bsgUid && (
-                  <InfoRow
-                    icon={FiShield}
-                    label="BSG UID (BYOMS)"
-                    value={bsgUid}
-                  />
-                )}
+
 
                 {/* ── Document Links ── */}
                 {aadhaarDocUrl && (

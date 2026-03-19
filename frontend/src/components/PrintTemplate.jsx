@@ -6,151 +6,310 @@ const PrintTemplate = ({ detail, user, verification }) => {
   if (!detail) return null;
 
   const photoUrl = detail.photo_path ? getUploadUrl(detail.photo_path) : null;
-  const aadhaarDocUrl = detail.adhar_doc_path ? getUploadUrl(detail.adhar_doc_path) : null;
-  const certDocUrl = detail.rashtrapati_certificate_path ? getUploadUrl(detail.rashtrapati_certificate_path) : null;
+  const aadhaarDocUrl = detail.adhar_doc_path
+    ? getUploadUrl(detail.adhar_doc_path)
+    : null;
+  const certDocUrl = detail.rashtrapati_certificate_path
+    ? getUploadUrl(detail.rashtrapati_certificate_path)
+    : null;
 
-  const Row = ({ label1, value1, label2, value2 }) => (
-    <div className="flex border-b border-black">
-      <div className="flex w-1/2 min-h-12">
-        <div className="w-1/3 border-r border-black p-3 font-bold text-sm bg-gray-50/50">{label1}</div>
-        <div className="w-2/3 border-r border-black p-3 text-sm">{value1}</div>
-      </div>
-      <div className="flex w-1/2 min-h-12">
-        <div className="w-1/3 border-r border-black p-3 font-bold text-sm bg-gray-50/50">{label2}</div>
-        <div className="w-2/3 p-3 text-sm">{value2}</div>
-      </div>
-    </div>
-  );
+  /* ── Shared cell styles ───────────────────────────────────────── */
+  const labelCell =
+    "px-3 py-2 text-xs font-bold text-gray-600 uppercase bg-[#F5F7FB] border-r border-b border-gray-300 flex items-center";
+  const valueCell =
+    "px-3 py-2 text-sm border-r border-b border-gray-300 flex items-center";
+  const valueCellLast =
+    "px-3 py-2 text-sm border-b border-gray-300 flex items-center";
+
+  /* 4-column grid for paired rows */
+  const gridStyle = {
+    display: "grid",
+    gridTemplateColumns: "120px 1fr 120px 1fr",
+  };
 
   return (
     <>
       <style>
         {`
           @media print {
-            @page { margin: 0; }
+            @page { margin: 0; size: A4 portrait; }
             * {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               color-adjust: exact !important;
             }
-            body {
-              margin: 1cm;
-            }
+            body { margin: 0; }
+            .print-template { font-size: 11px; }
           }
         `}
       </style>
-      <div className="hidden print:block w-full bg-white text-black p-8 font-serif min-h-screen">
-      <div className="flex flex-col border-[3px] border-[#1D57A5] min-h-[90vh]">
-          <div className="flex items-center justify-between bg-[#1D57A5] text-white p-6">
-            <img src={logo} alt="BSG Logo" className="h-28 w-auto bg-white p-1 rounded" />
-            <div className="flex-1 text-right pl-4">
-              <h1 className="text-3xl font-black uppercase tracking-wider text-right">The Bharat Scouts and Guides</h1>
-              <p className="text-xl font-semibold text-right mt-1">Creating - Better India</p>
-              <p className="text-sm text-right">Since 1909</p>
+
+      <div className="print-template hidden min-h-screen w-full bg-white font-sans text-black print:block">
+        <div
+          className="mx-auto"
+          style={{ maxWidth: "210mm", padding: "8mm 10mm" }}
+        >
+          {/* ═══════════ HEADER ═══════════ */}
+          <div
+            className="grid border-b-4 border-[#1D57A5]"
+            style={{
+              gridTemplateColumns: "90px 1fr",
+              gap: "16px",
+              padding: "16px 20px",
+              background: "#1D57A5",
+            }}
+          >
+            <div className="flex items-center justify-center">
+              <img
+                src={logo}
+                alt="BSG Logo"
+                className="h-20 w-auto rounded bg-white p-1"
+              />
+            </div>
+            <div className="flex flex-col justify-center text-right text-white">
+              <h1 className="text-2xl leading-tight font-black tracking-wider uppercase">
+                The Bharat Scouts and Guides
+              </h1>
+              <p className="mt-0.5 text-base font-semibold">
+                National Headquarters, New Delhi
+              </p>
+              <p className="mt-0.5 text-xs opacity-80">
+                Lakshmi Mazumdar Bhawan, 16 M.G. Marg, I.P. Estate, New Delhi –
+                110002
+              </p>
             </div>
           </div>
 
-          <div className="bg-white border-t-2 border-[#1D57A5] text-[#1D57A5] py-4 text-center text-2xl font-bold uppercase tracking-widest">
-            Rashtrapati Award Application Form - {detail.section || user?.section || "SECTION"}
+          {/* ═══════════ TITLE BAR ═══════════ */}
+          <div
+            className="border-b-2 border-[#1D57A5] py-2.5 text-center text-sm font-bold tracking-[0.2em] uppercase"
+            style={{ background: "#EBF0F9", color: "#1D57A5" }}
+          >
+            Rashtrapati {detail.section || user?.section || "Scout/Guide"} Award
+            — Guild Application Form
           </div>
 
-          {/* Top Section with Photo */}
-          <div className="flex border-t-[3px] border-[#1D57A5]">
-            <div className="flex flex-col w-3/4">
-              <div className="flex border-b border-black min-h-12">
-                <div className="w-1/2 border-r border-black flex items-center p-3 text-sm">
-                  <span className="font-bold mr-3 uppercase text-xs">App No:</span> {verification?.application_no || "N/A"}
-                </div>
-                <div className="w-1/2 border-r border-black flex items-center p-3 text-sm capitalize">
-                  <span className="font-bold mr-3 uppercase text-xs">Status:</span> {verification?.status || "PENDING"}
-                </div>
+          {/* ═══════════ TOP META (with Photo) ═══════════ */}
+          <div className="grid" style={{ gridTemplateColumns: "1fr 160px" }}>
+            {/* Left side: 4-column info grid */}
+            <div style={gridStyle}>
+              {/* Row 1: App No + Status */}
+              <div className={labelCell}>App No.</div>
+              <div className={valueCell + " font-semibold text-[#1D57A5]"}>
+                {verification?.application_no || "—"}
               </div>
-              <div className="flex border-b border-black min-h-12">
-                <div className="w-full border-r border-black flex items-center p-3 text-sm">
-                  <span className="font-bold mr-3 uppercase text-xs">Full Name:</span> {detail.name}
-                </div>
+              <div className={labelCell}>Status</div>
+              <div className={valueCellLast}>
+                <span
+                  className={`inline-block rounded py-0.5 text-xs font-black tracking-wide uppercase`}
+                >
+                  {verification?.status || "PENDING"}
+                </span>
               </div>
-              <div className="flex border-b border-black min-h-12">
-                <div className="w-1/2 border-r border-black flex items-center p-3 text-sm">
-                  <span className="font-bold mr-3 uppercase text-xs">BSG State:</span> {detail.bsg_state}
-                </div>
-                <div className="w-1/2 border-r border-black flex items-center p-3 text-sm">
-                  <span className="font-bold mr-3 uppercase text-xs">BSG Dist:</span> {detail.bsg_district}
-                </div>
+
+              {/* Row 2: Full Name + Section */}
+              <div className={labelCell}>Full Name</div>
+              <div className={valueCell + " font-semibold"}>{detail.name}</div>
+              <div className={labelCell}>Section</div>
+              <div className={valueCellLast + " font-semibold"}>
+                {detail.section || user?.section || "—"}
               </div>
-              <div className="flex min-h-12">
-                <div className="w-1/2 border-r border-black flex items-center p-3 text-sm">
-                  <span className="font-bold mr-3 uppercase text-xs">Rev State:</span> {detail.address?.revenue_state}
-                </div>
-                <div className="w-1/2 border-r border-black flex items-center p-3 text-sm">
-                  <span className="font-bold mr-3 uppercase text-xs">Rev Dist:</span> {detail.address?.revenue_district}
-                </div>
+
+              {/* Row 3: BSG State + BSG District */}
+              <div className={labelCell}>BSG State</div>
+              <div className={valueCell}>{detail.bsg_state || "—"}</div>
+              <div className={labelCell}>BSG District</div>
+              <div className={valueCellLast}>{detail.bsg_district || "—"}</div>
+
+              {/* Row 4: Revenue State + Revenue District */}
+              <div className={labelCell}>Rev. State</div>
+              <div className={valueCell}>
+                {detail.address?.revenue_state || "—"}
+              </div>
+              <div className={labelCell}>Rev. District</div>
+              <div className={valueCellLast}>
+                {detail.address?.revenue_district || "—"}
               </div>
             </div>
-            <div className="w-1/4 flex items-center justify-center p-3 border-l-2 border-[#1D57A5]">
-              <div className="w-40 h-48 border-2 border-gray-300 flex items-center justify-center bg-gray-100 overflow-hidden shadow-sm">
+
+            {/* Right side: Passport Photo */}
+            <div className="flex items-center justify-center border-b border-l-2 border-[#1D57A5] border-gray-300 bg-[#FAFBFD] p-3">
+              <div className="flex h-[150px] w-[125px] items-center justify-center overflow-hidden border-2 border-gray-300 bg-white shadow-sm">
                 {photoUrl ? (
-                  <img src={photoUrl} alt="Applicant" className="w-full h-full object-cover" />
+                  <img
+                    src={photoUrl}
+                    alt="Applicant"
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
-                  <span className="text-gray-400 text-sm">Photo</span>
+                  <span className="px-2 text-center text-xs text-gray-400">
+                    Passport
+                    <br />
+                    Photo
+                  </span>
                 )}
               </div>
             </div>
           </div>
 
-
-
-          {/* Section 1 */}
-          <div className="bg-gray-100 p-2 border-t-[3px] border-b-2 border-[#1D57A5] font-bold text-sm text-[#1D57A5] uppercase tracking-wider">
-            1. Personal Details
-          </div>
-          <Row label1="Email:" value1={user?.email || detail.email} label2="Contact Number:" value2={detail.mobile_no || user?.mobile_no} />
-          <Row label1="Aadhaar No:" value1={detail.aadhaar_no} label2="Date Of Birth:" value2={detail.dob} />
-          <Row label1="Address:" value1={detail.address?.house_no} label2="Pin Code:" value2={detail.address?.pincode} />
-          <Row label1="Qualification:" value1={detail.highest_qualification} label2="T-Shirt Size:" value2={detail.tshirt_size} />
-          <div className="flex border-b border-black">
-             <div className="flex w-1/2 min-h-12">
-                <div className="w-1/3 border-r border-black p-3 font-bold text-sm bg-gray-50/50">Profession:</div>
-                <div className="w-2/3 border-r border-black p-3 text-sm">{detail.professional_qualification}</div>
-             </div>
-             <div className="flex w-1/2 min-h-12 bg-gray-50/20"></div>
+          {/* ═══════════ SECTION 1 — Personal Details ═══════════ */}
+          <div className="bg-[#1D57A5] px-4 py-1.5 text-xs font-bold tracking-widest text-white uppercase">
+            Section 1 — Personal Details
           </div>
 
-          {/* Section 2 */}
-          <div className="bg-gray-100 p-2 border-t-[3px] border-b-2 border-[#1D57A5] font-bold text-sm text-[#1D57A5] uppercase tracking-wider">
-            2. Details of Scouting / Guiding
-          </div>
-          <Row label1="Section:" value1={detail.section || user?.section} label2="Year of Award:" value2={detail.year_of_rastrapati} />
-          <Row label1="Certificate Number:" value1={detail.certificate_no} label2="Souvenir Required:" value2={detail.souvenir} />
+          <div style={gridStyle}>
+            {/* Row 1 */}
+            <div className={labelCell}>Email</div>
+            <div className={valueCell + " break-all"}>
+              {user?.email || detail.email || "—"}
+            </div>
+            <div className={labelCell}>Contact No.</div>
+            <div className={valueCellLast}>
+              {detail.mobile_no || user?.mobile_no || "—"}
+            </div>
 
-          {/* Section 3 — Documents */}
-          <div className="bg-gray-100 p-2 border-t-[3px] border-b-2 border-[#1D57A5] font-bold text-sm text-[#1D57A5] uppercase tracking-wider">
-            3. Uploaded Documents
+            {/* Row 2 */}
+            <div className={labelCell}>Aadhaar No.</div>
+            <div className={valueCell + " font-mono tracking-wide"}>
+              {detail.aadhaar_no || "—"}
+            </div>
+            <div className={labelCell}>Date of Birth</div>
+            <div className={valueCellLast}>{detail.dob || "—"}</div>
+
+            {/* Row 3 */}
+            <div className={labelCell}>Address</div>
+            <div className={valueCell}>{detail.address?.house_no || "—"}</div>
+            <div className={labelCell}>Pin Code</div>
+            <div className={valueCellLast}>
+              {detail.address?.pincode || "—"}
+            </div>
+
+            {/* Row 4 */}
+            <div className={labelCell}>Qualification</div>
+            <div className={valueCell}>
+              {detail.highest_qualification || "—"}
+            </div>
+            <div className={labelCell}>Profession</div>
+            <div className={valueCellLast}>
+              {detail.professional_qualification || "—"}
+            </div>
+
+            {/* Row 5 */}
+            <div className={labelCell}>T-Shirt Size</div>
+            <div className={valueCell + " font-semibold"}>
+              {detail.tshirt_size || "—"}
+            </div>
+            <div
+              className="border-b border-gray-300"
+              style={{ gridColumn: "span 2" }}
+            ></div>
           </div>
-          <div className="flex border-b border-black min-h-12">
-            <div className="w-1/6 border-r border-black p-3 font-bold text-sm bg-gray-50/50">Aadhaar Doc:</div>
-            <div className="w-5/6 p-3 text-sm">
+
+          {/* ═══════════ SECTION 2 — Scouting / Guiding Details ═══════════ */}
+          <div className="bg-[#1D57A5] px-4 py-1.5 text-xs font-bold tracking-widest text-white uppercase">
+            Section 2 — Scouting / Guiding Details
+          </div>
+
+          <div style={gridStyle}>
+            {/* Row 1 */}
+            <div className={labelCell}>Section</div>
+            <div className={valueCell + " font-semibold"}>
+              {detail.section || user?.section || "—"}
+            </div>
+            <div className={labelCell}>Award Year</div>
+            <div className={valueCellLast + " font-semibold"}>
+              {detail.year_of_rastrapati || "—"}
+            </div>
+
+            {/* Row 2 */}
+            <div className={labelCell}>Certificate No.</div>
+            <div className={valueCell + " font-mono"}>
+              {detail.certificate_no || "—"}
+            </div>
+            <div className={labelCell}>Souvenir</div>
+            <div className={valueCellLast}>{detail.souvenir || "—"}</div>
+          </div>
+
+          {/* ═══════════ SECTION 3 — Uploaded Documents ═══════════ */}
+          <div className="bg-[#1D57A5] px-4 py-1.5 text-xs font-bold tracking-widest text-white uppercase">
+            Section 3 — Uploaded Documents
+          </div>
+
+          <div style={gridStyle}>
+            <div className={labelCell}>Aadhaar Doc</div>
+            <div className={valueCell}>
               {aadhaarDocUrl ? (
-                <a href={aadhaarDocUrl} target="_blank" rel="noopener noreferrer" className="text-[#1D57A5] underline font-black">
-                  VIEW DOCUMENT LINK
+                <a
+                  href={aadhaarDocUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-bold text-[#1D57A5] uppercase underline"
+                >
+                  Link
                 </a>
-              ) : "Not uploaded"}
+              ) : (
+                <span className="text-xs text-gray-400">Not uploaded</span>
+              )}
             </div>
-          </div>
-          <div className="flex border-b border-black min-h-12">
-            <div className="w-1/6 border-r border-black p-3 font-bold text-sm bg-gray-50/50">Certificate:</div>
-            <div className="w-5/6 p-3 text-sm">
+            <div className={labelCell}>RP Certificate</div>
+            <div className={valueCellLast}>
               {certDocUrl ? (
-                <a href={certDocUrl} target="_blank" rel="noopener noreferrer" className="text-[#1D57A5] underline font-black">
-                  VIEW CERTIFICATE LINK
+                <a
+                  href={certDocUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-bold text-[#1D57A5] uppercase underline"
+                >
+                  Link
                 </a>
-              ) : "Not uploaded"}
+              ) : (
+                <span className="text-xs text-gray-400">Not uploaded</span>
+              )}
             </div>
           </div>
 
-          <div className="flex-1 p-6 border-t-[3px] border-[#1D57A5] text-sm text-justify italic bg-gray-50/30">
-            <span className="font-bold mr-2 uppercase not-italic">Declaration:</span>
-            I hereby declare that all the information furnished above is true, complete and correct to the best of my knowledge and belief. I understand that in the event of any information being found false or incorrect at any stage, my application/award is liable to be rejected/cancelled.
+          {/* ═══════════ DECLARATION ═══════════ */}
+          <div className="bg-[#1D57A5] px-4 py-1.5 text-xs font-bold tracking-widest text-white uppercase">
+            Declaration
+          </div>
+          <div
+            className="border-b border-gray-300 px-4 py-4 text-justify text-xs leading-relaxed"
+            style={{ background: "#FCFCFD" }}
+          >
+            I, <strong>{detail.name}</strong>, hereby solemnly declare that all
+            the information furnished above is true, complete, and correct to
+            the best of my knowledge and belief. I understand that in the event
+            of any information being found false or incorrect at any stage, my
+            application / award is liable to be rejected / cancelled.
+          </div>
+
+          {/* ═══════════ SIGNATURE SECTION ═══════════ */}
+          {/* <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: "80px" }}>
+            <div className="flex flex-col justify-between border-r border-b border-gray-300 px-4 py-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase">Date & Place</p>
+              <div className="mt-auto mb-2 w-3/4 border-b border-dashed border-gray-400"></div>
+            </div>
+            <div className="flex flex-col justify-between border-b border-gray-300 px-4 py-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase">Signature of Applicant</p>
+              <div className="mt-auto mb-2 ml-auto w-3/4 border-b border-dashed border-gray-400"></div>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: "70px" }}>
+            <div className="flex flex-col justify-between border-r border-gray-300 bg-[#F5F7FB] px-4 py-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase">For Office Use Only</p>
+              <div className="mt-auto mb-2 w-3/4 border-b border-dashed border-gray-400"></div>
+            </div>
+            <div className="flex flex-col justify-between bg-[#F5F7FB] px-4 py-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase">Authorized Signatory & Seal</p>
+              <div className="mt-auto mb-2 ml-auto w-3/4 border-b border-dashed border-gray-400"></div>
+            </div>
+          </div> */}
+
+          {/* ═══════════ FOOTER ═══════════ */}
+          <div className="bg-[#1D57A5] py-1.5 text-center text-[9px] font-semibold tracking-wider text-white uppercase">
+            The Bharat Scouts and Guides — National Headquarters, New Delhi
+            &nbsp;|&nbsp; www.bsgindia.live
           </div>
         </div>
       </div>

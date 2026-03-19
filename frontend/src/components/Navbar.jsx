@@ -89,9 +89,9 @@ const Navbar = ({ title = "" }) => {
     <div className="mx-auto w-full">
       <nav className="mx-4 md:mx-8">
         {/* Main bar */}
-        <div className="flex items-center rounded-xl bg-[#1D57A5] px-4 py-2 shadow-lg md:px-6">
+        <div className="flex items-center  bg-[#1D57A5] px-4 py-2 shadow-lg md:px-6">
           {/* LEFT — Logo */}
-          <div className="flex shrink-0 items-center justify-start sm:w-44 md:w-56">
+          <div className="flex shrink-0 items-center justify-start sm:w-44 md:w-56 ">
             <img
               src={image}
               alt="BSG-logo"
@@ -110,16 +110,16 @@ const Navbar = ({ title = "" }) => {
           </div>
 
           {/* RIGHT — Profile or Links */}
-          <div className="flex shrink-0 items-center justify-end sm:w-44 md:w-56">
+          <div className="flex shrink-0 items-center justify-end  sm:w-44 md:w-56">
             {isLoggedIn ? (
               <div
-                className="group relative flex cursor-pointer items-center gap-2 rounded-full border border-white/20 bg-white/5 p-1 transition-all hover:bg-white/10"
+                className="group relative flex cursor-pointer items-center gap-2 rounded-full border border-white/20 bg-white/5 p-2 transition-all hover:bg-white/10"
                 onMouseEnter={() => setProfileOpen(true)}
                 onMouseLeave={() => setProfileOpen(false)}
               >
                 {/* Info (Visible on desktop) */}
                 <div className="hidden flex-col text-right md:flex">
-                  <span className="max-w-[120px] truncate text-xs font-bold text-white leading-tight">
+                  <span className="max-w-[120px] truncate text-xs font-bold text-white leading-tight text-left form">
                     {["admin", "superadmin"].includes(user?.role) ? "ADMIN" : displayName}
                   </span>
                   <span className="text-[10px] font-medium text-white/70 uppercase tracking-wider">

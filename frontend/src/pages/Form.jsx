@@ -21,7 +21,7 @@ import {
 import { MdOutlineInfo } from "react-icons/md";
 
 // ── India state / district data ──────────────────────────────────────────
-import { INDIA_STATES, STATE_DISTRICTS, getDistricts } from "../data/indiaStates";
+import { INDIA_STATES, getDistricts, BSG_STATES, getBsgDistricts } from "../data/indiaStates";
 
 const TSHIRT_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
 const SECTIONS = ["Scout", "Guide", "Rover", "Ranger"];
@@ -654,7 +654,7 @@ const Form = () => {
                 }}
               >
                 <option value="">-- Select BSG State --</option>
-                {INDIA_STATES.map((s) => (
+                {BSG_STATES.map((s) => (
                   <option key={s}>{s}</option>
                 ))}
               </select>
@@ -672,7 +672,7 @@ const Form = () => {
                 disabled={!form.bsgState}
               >
                 <option value="">-- Select BSG District --</option>
-                {getDistricts(form.bsgState).map((d) => (
+                {getBsgDistricts(form.bsgState).map((d) => (
                   <option key={d}>{d}</option>
                 ))}
               </select>
@@ -968,17 +968,12 @@ const Form = () => {
               className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#1D57A5]"
             />
             <span className="text-sm leading-relaxed text-gray-700">
-              I,{" "}
-              <strong className="text-gray-900">
-                {form.fullName || "the applicant"}
-              </strong>
-              , hereby solemnly declare that all the information furnished in
-              this application form is true, correct, and complete to the best
-              of my knowledge and belief. I understand that any false or
-              misleading information may result in the rejection of my
-              application or cancellation of the Rashtrapati Guild Award. I
-              further confirm that all uploaded documents are genuine and
-              untampered. <span className="text-red-500">*</span>
+              I hereby declare that the information provided by me is true and
+              correct to the best of my knowledge. I confirm that I have
+              fulfilled all the requirements for the Rashtrapati Guide Award as
+              per the rules of The Bharat Scouts and Guides. I understand that
+              any false information may lead to rejection of my application.{" "}
+              <span className="text-red-500">*</span>
             </span>
           </label>
           {errors.declared && (

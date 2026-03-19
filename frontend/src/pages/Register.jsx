@@ -159,8 +159,18 @@ const Register = () => {
     if (!form.mobile_no || form.mobile_no.length !== 10)
       errs.mobile_no = "Mobile number must be exactly 10 digits";
     if (!form.section) errs.section = "Please select a section";
-    if (!form.password || form.password.length < 6)
-      errs.password = "Min 6 characters";
+    if (!form.password) {
+      errs.password = "Password is required";
+    } else {
+      const pw = form.password;
+      const checks = [];
+      if (pw.length < 4) checks.push("at least 4 characters");
+      if (!/[A-Z]/.test(pw)) checks.push("1 uppercase letter");
+      if (!/[0-9]/.test(pw)) checks.push("1 number");
+      if (!/[^A-Za-z0-9]/.test(pw)) checks.push("1 special character");
+      if (checks.length > 0)
+        errs.password = `Password needs: ${checks.join(", ")}`;
+    }
     if (form.password !== form.confirmPassword)
       errs.confirmPassword = "Passwords do not match";
     setErrors(errs);
@@ -365,7 +375,7 @@ const Register = () => {
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Min 6 characters"
+                    placeholder="Create a strong password"
                     value={form.password}
                     onChange={set("password")}
                     className={inputCls + " pr-10"}
@@ -378,6 +388,24 @@ const Register = () => {
                     {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                   </button>
                 </div>
+                {/* Password strength indicators */}
+                {form.password && (
+                  <div className="mt-2 rounded-lg border border-gray-100 bg-gray-50 p-2.5 space-y-1">
+                    {[
+                      { test: form.password.length >= 4, label: "At least 4 characters" },
+                      { test: /[A-Z]/.test(form.password), label: "One uppercase letter (A-Z)" },
+                      { test: /[0-9]/.test(form.password), label: "One number (0-9)" },
+                      { test: /[^A-Za-z0-9]/.test(form.password), label: "One special character (!@#$...)" },
+                    ].map(({ test, label }) => (
+                      <div key={label} className="flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full shrink-0 transition-colors duration-200 ${test ? "bg-green-500" : "bg-red-400"}`} />
+                        <span className={`text-xs transition-colors duration-200 ${test ? "text-green-600 font-medium" : "text-red-500"}`}>
+                          {label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {errors.password && <p className={errCls}>{errors.password}</p>}
               </div>
               <div>

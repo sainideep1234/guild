@@ -43,10 +43,10 @@ const StatusBadge = ({ status }) => {
 // ── Excel Download Utility ────────────────────────────────────────────────
 function downloadExcel(data) {
   const columns = [
-    "NAME", "EMAIL", "MOBILE", "SECTION", "YEAR", "STATUS",
+    "NAME", "EMAIL", "MOBILE NO", "SECTION", "YEAR OF RASTRAPATI", "STATUS",
     "REVENUE STATE", "REVENUE DISTRICT", "BSG STATE", "BSG DISTRICT",
-    "AADHAAR NO", "CERTIFICATE NO", "QUALIFICATION", "PROFESSION",
-    "T SHIRT SIZE", "SOUVENIR", "PINCODE", "ADDRESS", "APPLICATION NO",
+    "AADHAAR NO", "CERTIFICATE NO", "HIGHEST QUALIFICATION", "PROFESSIONAL QUALIFICATION",
+    "TSHIRT SIZE", "SOUVENIR", "PINCODE", "ADDRESS", "APPLICATION NO",
   ];
 
   const rows = data.map((item) => [

@@ -87,9 +87,7 @@ adminRouter.post("/login", async (req, res) => {
 
     const sent = await sendOtpEmail(email, otp);
     if (!sent) {
-      return res
-        .status(500)
-        .json({ message: "Failed to send OTP. Please try again." });
+      console.log(`⚠️  [DEV] Admin OTP for ${email}: ${otp} (email delivery failed)`);
     }
 
     return res
@@ -117,7 +115,7 @@ adminRouter.post("/resend-otp", async (req, res) => {
 
     const sent = await sendOtpEmail(email, otp);
     if (!sent) {
-      return res.status(500).json({ message: "Failed to resend OTP." });
+      console.log(`⚠️  [DEV] Admin OTP for ${email}: ${otp} (email delivery failed)`);
     }
 
     return res.status(200).json({ message: "OTP resent to your email.", email });

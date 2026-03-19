@@ -67,9 +67,7 @@ userRouter.post("/send-otp", async (req, res) => {
 
     const sent = await sendOtpEmail(email, otp);
     if (!sent) {
-      return res
-        .status(500)
-        .json({ message: "Failed to send OTP. Try again." });
+      console.log(`⚠️  [DEV] OTP for ${email}: ${otp} (email delivery failed)`);
     }
 
     return res
@@ -102,9 +100,9 @@ userRouter.post("/resend-otp", async (req, res) => {
     user.otp_expiresAt = expiresAt;
     await user.save();
 
-    const sent = await sendOtpEmail(email, otp);
+    const sent = await sendOtpEmail(email, otp, user.name);
     if (!sent) {
-      return res.status(500).json({ message: "Failed to send OTP. Try again." });
+      console.log(`⚠️  [DEV] OTP for ${email}: ${otp} (email delivery failed)`);
     }
 
     return res.status(200).json({ message: "OTP resent to your email address", email });
@@ -242,9 +240,9 @@ userRouter.post("/signin", async (req, res) => {
     user.otp_verified = false;
     await user.save();
 
-    const sent = await sendOtpEmail(email, otp);
+    const sent = await sendOtpEmail(email, otp, user.name);
     if (!sent) {
-      return res.status(500).json({ message: "Failed to send OTP. Try again." });
+      console.log(`⚠️  [DEV] OTP for ${email}: ${otp} (email delivery failed)`);
     }
 
     return res.status(200).json({

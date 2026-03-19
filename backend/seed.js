@@ -64,7 +64,7 @@ async function seed() {
 
   for (const seed of userSeeds) {
     // 1. Create Registration
-    const reg = await Registration.create({
+    const registrationData = {
       email: seed.email,
       name: seed.name,
       password: "User@1234",
@@ -74,11 +74,16 @@ async function seed() {
       otp_verified: true,
       status: seed.status,
       admin_remarks: seed.remarks || null,
-      application_no: seed.appNo || null,
       registration_date: new Date(),
       application_submission_date: new Date(),
       admin_id: seed.status !== "PENDING" ? createdAdmins[0]._id : null,
-    });
+    };
+
+    if (seed.appNo) {
+      registrationData.application_no = seed.appNo;
+    }
+
+    const reg = await Registration.create(registrationData);
 
     // 2. Create UserDetail
     await UserDetail.create({

@@ -1,44 +1,55 @@
 import nodemailer from "nodemailer";
 import "dotenv/config";
 
+const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
+
 const transporter = nodemailer.createTransport({
-  host: "smtp.office365.com",
-  port: 587,
-  secure: false,
+  host: process.env.SMTP_HOST || "mail.bsgindia.live",
+  port: smtpPort,
+  secure: smtpPort === 465, // true for port 465 (SSL), false for 587 (STARTTLS)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
   tls: {
-    ciphers: "SSLv3",
+    rejectUnauthorized: false,
   },
 });
 
-export async function sendOtpEmail(email = "", otp) {
+export async function sendOtpEmail(email = "", otp, name = "User") {
   if (!email) return false;
   try {
     await transporter.sendMail({
-      from: `"BSG India" <${process.env.EMAIL_USER}>`,
+      from: `"Rashtrapati Guild Portal" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Your OTP Code – BSG India",
+      subject: "Your OTP – Rashtrapati Guild Portal",
       html: `
       <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;padding:20px;background-color:#f4f6f9;color:#333">
-        <div style="max-width:500px;margin:auto;background:#ffffff;padding:30px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1)">
-          <h2 style="color:#1D56A5;text-align:center">🔐 One-Time Password (OTP)</h2>
-          <p style="font-size:16px;line-height:1.5">Dear User,</p>
-          <p style="font-size:16px;line-height:1.5">Your OTP for verification is:</p>
-          <div style="text-align:center;margin:20px 0">
-            <span style="font-size:28px;font-weight:bold;color:#1D56A5;background-color:#FFDA00;padding:12px 24px;border-radius:8px;display:inline-block">
-              ${otp}
-            </span>
+        <div style="max-width:520px;margin:auto;background:#ffffff;padding:0;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);overflow:hidden">
+          <div style="background-color:#1D57A5;padding:20px 30px;text-align:center">
+            <h2 style="color:#ffffff;margin:0;font-size:20px;letter-spacing:1px">🔐 OTP Verification</h2>
           </div>
-          <p style="font-size:14px;color:#666">This OTP is valid for <strong>5 minutes</strong>. Please do not share it with anyone.</p>
-          <hr style="margin:30px 0;border:none;border-top:1px solid #ddd">
-          <p style="font-size:13px;text-align:center;color:#999">
-            If you didn't request this OTP, please ignore this email.<br>
-            Thank you,<br>
-            <strong>The Bharat Scouts and Guides Team</strong>
-          </p>
+          <div style="padding:30px">
+            <p style="font-size:16px;line-height:1.6;margin:0 0 10px">Dear <strong>${name}</strong>,</p>
+            <p style="font-size:15px;line-height:1.6;margin:0 0 20px">Your One Time Password for verification on the <strong>Rashtrapati Guild Portal</strong> is:</p>
+            <div style="text-align:center;margin:24px 0">
+              <span style="font-size:32px;font-weight:bold;color:#1D57A5;background-color:#EBF0F9;padding:14px 32px;border-radius:10px;display:inline-block;letter-spacing:6px;border:2px dashed #1D57A5">
+                ${otp}
+              </span>
+            </div>
+            <div style="background-color:#FFF8E1;padding:14px 18px;border-radius:8px;margin:20px 0;border-left:4px solid #FFB300">
+              <p style="font-size:14px;color:#6D4C00;margin:0">⏱️ This OTP is valid for <strong>05 minutes</strong>.</p>
+            </div>
+            <div style="background-color:#FFF3F3;padding:14px 18px;border-radius:8px;margin:10px 0 20px;border-left:4px solid #EF4444">
+              <p style="font-size:14px;color:#991B1B;margin:0">⚠️ For security reasons, please <strong>do not share this OTP</strong> with anyone.</p>
+            </div>
+            <p style="font-size:13px;color:#999;margin:20px 0 0;text-align:center;font-style:italic">This is an auto-generated email. Please do not reply to this email.</p>
+          </div>
+          <div style="background-color:#f8f9fb;padding:18px 30px;border-top:1px solid #eee;text-align:center">
+            <p style="font-size:13px;color:#666;margin:0 0 4px">Regards,</p>
+            <p style="font-size:14px;color:#1D57A5;font-weight:bold;margin:0">Rashtrapati Guild Portal</p>
+            <p style="font-size:12px;color:#999;margin:4px 0 0">The Bharat Scouts and Guides<br>National Headquarters</p>
+          </div>
         </div>
       </div>`,
     });
@@ -118,23 +129,29 @@ export async function sendRegistrationEmail(email = "", password = "") {
 export async function sendFormSubmissionEmail(email = "", name = "") {
   try {
     await transporter.sendMail({
-      from: `"BSG India" <${process.env.EMAIL_USER}>`,
+      from: `"Rashtrapati Guild Portal" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Application Submitted Successfully – BSG India",
+      subject: "Application Submitted Successfully – Rashtrapati Guild Portal",
       html: `
       <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;padding:20px;background-color:#f4f6f9;color:#333">
-        <div style="max-width:500px;margin:auto;background:#ffffff;padding:30px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1)">
-          <h2 style="color:#1D56A5;text-align:center">📋 Application Submitted</h2>
-          <p style="font-size:16px;line-height:1.5">Dear <strong>${name}</strong>,</p>
-          <p style="font-size:16px;line-height:1.5">Your Rashtrapati Guild application has been submitted successfully and is now <strong>under review</strong>.</p>
-          <div style="background-color:#f0f9f4;padding:15px;border-radius:8px;margin:20px 0;border-left:4px solid #22c55e">
-            <p style="font-size:14px;color:#166534;margin:0">✅ Your application is pending admin verification. You will be notified once it is reviewed.</p>
+        <div style="max-width:520px;margin:auto;background:#ffffff;padding:0;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);overflow:hidden">
+          <div style="background-color:#1D57A5;padding:20px 30px;text-align:center">
+            <h2 style="color:#ffffff;margin:0;font-size:20px;letter-spacing:1px">📋 Application Submitted</h2>
           </div>
-          <p style="font-size:14px;color:#666">You can check your application status anytime from your dashboard.</p>
-          <hr style="margin:30px 0;border:none;border-top:1px solid #ddd">
-          <p style="font-size:13px;text-align:center;color:#999">
-            Thank you,<br><strong>The Bharat Scouts and Guides Team</strong>
-          </p>
+          <div style="padding:30px">
+            <p style="font-size:16px;line-height:1.6;margin:0 0 10px">Dear <strong>${name}</strong>,</p>
+            <p style="font-size:15px;line-height:1.6;margin:0 0 20px">Your Rashtrapati Guild Award application has been <strong>submitted successfully</strong> and is now under review.</p>
+            <div style="background-color:#f0f9f4;padding:16px 18px;border-radius:8px;margin:20px 0;border-left:4px solid #22c55e">
+              <p style="font-size:14px;color:#166534;margin:0">✅ Your application is pending admin verification. You will be notified once it is reviewed.</p>
+            </div>
+            <p style="font-size:14px;color:#666;margin:16px 0 0">You can check your application status anytime from your <strong>Dashboard</strong>.</p>
+            <p style="font-size:13px;color:#999;margin:20px 0 0;text-align:center;font-style:italic">This is an auto-generated email. Please do not reply to this email.</p>
+          </div>
+          <div style="background-color:#f8f9fb;padding:18px 30px;border-top:1px solid #eee;text-align:center">
+            <p style="font-size:13px;color:#666;margin:0 0 4px">Regards,</p>
+            <p style="font-size:14px;color:#1D57A5;font-weight:bold;margin:0">Rashtrapati Guild Portal</p>
+            <p style="font-size:12px;color:#999;margin:4px 0 0">The Bharat Scouts and Guides<br>National Headquarters</p>
+          </div>
         </div>
       </div>`,
     });

@@ -607,7 +607,10 @@ const Form = () => {
               <select
                 className={inputCls}
                 value={form.revenueState}
-                onChange={set("revenueState")}
+                onChange={(e) => {
+                  set("revenueState")(e);
+                  setForm((p) => ({ ...p, revenueDistrict: "" }));
+                }}
               >
                 <option value="">-- Select State --</option>
                 {INDIA_STATES.map((s) => (

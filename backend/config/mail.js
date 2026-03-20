@@ -1,26 +1,33 @@
-import nodemailer from "nodemailer";
+import nodemailer, { createTestAccount } from "nodemailer";
 import "dotenv/config";
 
 const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "mail.bsgindia.live",
-  port: smtpPort,
-  secure: smtpPort === 465, // true for port 465 (SSL), false for 587 (STARTTLS)
+  service: "Gmail",
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
+    user: process.env.USER_EMAIL,
+    pass: process.env.USER_PASS,
   },
 });
+// const transporter = nodemailer.createTransport({
+//   host: process.env.SMTP_HOST || "mail.bsgindia.live",
+//   port: smtpPort,
+//   secure: smtpPort === 465, // true for port 465 (SSL), false for 587 (STARTTLS)
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASS,
+//   },
+//   tls: {
+//     rejectUnauthorized: false,
+//   },
+// });
 
 export async function sendOtpEmail(email = "", otp, name = "User") {
   if (!email) return false;
   try {
     await transporter.sendMail({
-      from: `"Rashtrapati Guild Portal" <${process.env.EMAIL_USER}>`,
+      from: `"Rashtrapati Guild Portal" <${"noreply@bsgindia.live"}>`,
       to: email,
       subject: "Your OTP – Rashtrapati Guild Portal",
       html: `

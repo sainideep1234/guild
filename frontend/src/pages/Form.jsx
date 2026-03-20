@@ -382,6 +382,11 @@ const Form = () => {
       value = value.slice(0, 50);
     }
 
+    // Certificate No: max 15 characters
+    if (key === "certificateNo") {
+      value = value.slice(0, 15);
+    }
+
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: "" }));
   };
@@ -418,6 +423,8 @@ const Form = () => {
     if (!form.awardYear) errs.awardYear = "Award Year is required";
     if (!(form.certificateNo || "").trim())
       errs.certificateNo = "Certificate No is required";
+    else if ((form.certificateNo || "").trim().length > 15)
+      errs.certificateNo = "Certificate No must not exceed 15 characters";
     if (!form.souvenir) errs.souvenir = "Souvenir preference is required";
     if (!form.certFile && !meData?.detail)
       errs.certFile = "Certificate Document is required";
@@ -851,6 +858,7 @@ const Form = () => {
               <input
                 className={inputCls}
                 placeholder="e.g. RA/2023/12345"
+                maxLength={15}
                 value={form.certificateNo}
                 onChange={set("certificateNo")}
               />

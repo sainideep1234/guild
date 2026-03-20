@@ -47,7 +47,7 @@ const ImageCarousel = () => {
             key={index}
             className={`transition-all duration-500 ease-out rounded-full ${
               index === activeIndex 
-                ? "w-10 h-2 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]" 
+                ? "w-10 h-2 bg-white" 
                 : "w-2 h-2 bg-white/50 hover:bg-white/90 hover:scale-125"
             }`}
             onClick={() => setActiveIndex(index)}

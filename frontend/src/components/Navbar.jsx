@@ -89,7 +89,7 @@ const Navbar = ({ title = "" }) => {
     <div className="mx-auto w-full">
       <nav className="mx-4 md:mx-8">
         {/* Main bar */}
-        <div className="flex items-center  bg-[#1D57A5] px-4 py-2 shadow-lg md:px-6">
+        <div className="flex items-center  bg-[#1D57A5] px-4 py-2 md:px-6">
           {/* LEFT — Logo */}
           <div className="flex shrink-0 items-center justify-start sm:w-44 md:w-56 ">
             <img
@@ -103,7 +103,7 @@ const Navbar = ({ title = "" }) => {
           {/* CENTER — Title */}
           <div className="flex flex-1 items-center justify-center px-2">
             {title && (
-              <h1 className="text-center text-base font-extrabold tracking-wide text-white uppercase drop-shadow-sm sm:text-xl md:text-2xl lg:text-3xl">
+              <h1 className="text-center text-base font-extrabold tracking-wide text-white uppercase sm:text-xl md:text-2xl lg:text-3xl">
                 {title}
               </h1>
             )}

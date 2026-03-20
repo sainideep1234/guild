@@ -76,7 +76,7 @@ const SectionHeading = ({ label, title, subtitle }) => {
       }}
     >
       {label && (
-        <span className="mb-2 inline-block rounded-full bg-[#1D57A5]/10 px-4 py-1 text-xs font-bold tracking-widest text-[#1D57A5] uppercase">
+        <span className="mb-2 inline-block px-4 py-1 text-xs font-bold tracking-widest text-[#1D57A5] uppercase">
           {label}
         </span>
       )}
@@ -116,24 +116,14 @@ const BadgeCard = ({ image, label, color, desc, delay }) => {
             : "translateY(0) scale(1)"
           : "translateY(40px) scale(0.95)",
         boxShadow: hovered
-          ? `0 20px 40px -12px ${color}30`
+          ? "0 20px 40px -12px rgba(0,0,0,0.15)"
           : "0 4px 24px -4px rgba(0,0,0,0.08)",
       }}
     >
-      {/* Glow ring */}
-      <div
-        className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-        style={{
-          background: `linear-gradient(135deg, ${color}25, transparent, ${color}15)`,
-        }}
-      />
-
-      <div className="relative z-10 flex flex-col items-center gap-4">
-        {/* Badge image with hover bloom */}
+      <div className="flex flex-col items-center gap-4">
         <div
           className="flex h-28 w-28 items-center justify-center rounded-full transition-all duration-500 sm:h-32 sm:w-32"
           style={{
-            background: `radial-gradient(circle, ${color}08 0%, ${color}04 70%, transparent 100%)`,
             transform: hovered ? "scale(1.1)" : "scale(1)",
           }}
         >
@@ -144,7 +134,7 @@ const BadgeCard = ({ image, label, color, desc, delay }) => {
             style={{
               transform: hovered ? "scale(1.15) rotate(-3deg)" : "scale(1)",
               filter: hovered
-                ? `drop-shadow(0 8px 16px ${color}40)`
+                ? "drop-shadow(0 8px 16px rgba(0,0,0,0.2))"
                 : "none",
             }}
           />
@@ -185,10 +175,6 @@ const InfoCard = ({ image, text, reverse = false, index }) => {
     >
       {/* Badge image with floating bob + glow */}
       <div className="relative shrink-0">
-        <div
-          className="absolute -inset-3 rounded-full opacity-20 blur-xl"
-          style={{ background: badges[index]?.color || "#1D57A5" }}
-        />
         <img
           src={image}
           alt="rashtrapati-badge"
@@ -231,10 +217,9 @@ const LandingPage = () => {
     <div className="flex min-h-screen flex-col bg-gray-100">
       <Navbar title={"rastrapati guild"} />
 
-      {/* ── HERO CAROUSEL with overlay title ────────────────────────────── */}
       <section className="relative">
         <div className="mx-auto max-w-[1400px] px-4 pt-4 sm:px-6">
-          <div className="overflow-hidden rounded-2xl shadow-2xl sm:rounded-3xl">
+          <div className="overflow-hidden rounded-2xl sm:rounded-3xl">
             <ImageCarousel />
           </div>
         </div>

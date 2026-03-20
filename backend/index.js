@@ -6,6 +6,14 @@ import { connectToDb } from "./config/db.js";
 import adminRouter from "./routes/admin.js";
 import userRouter from "./routes/user.js";
 
+if (process.env.NODE_ENV === "production") {
+  console.log = () => {};
+  console.info = () => {};
+  console.debug = () => {};
+  console.error = () => {};
+  console.warn = () => {};
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

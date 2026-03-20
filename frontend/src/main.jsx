@@ -5,6 +5,14 @@ import App from "./App.jsx";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+if (import.meta.env.MODE === 'production') {
+  console.log = () => {};
+  console.info = () => {};
+  console.debug = () => {};
+  console.error = () => {};
+  console.warn = () => {};
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
